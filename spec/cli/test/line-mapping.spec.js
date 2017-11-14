@@ -58,23 +58,23 @@ describe('TestCommand test server error scenario', () => {
     expect(commandOut).toMatch(/the index 'then' does not exist/);
 
     // division by zero ("*/myDevice.class.nut" at line: 7)
-    expect(commandOut).toMatch(/division by zero \(\"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/division by zero \"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+/);
 
     // wrong number of parameters ("*/myDevice.class.nut" at line: 11)
-    expect(commandOut).toMatch(/wrong number of parameters \(\"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/wrong number of parameters \"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+/);
 
     // float expected for the specified format ("*/code-error.device.nut" at line: 33)
-    expect(commandOut).toMatch(/float expected for the specified format \(\"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/float expected for the specified format \"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+/);
 
     // the index 'unknownField' does not exist ("*/code-error.device.nut" at line: \d+)
-    expect(commandOut).toMatch(/the index '\w+' does not exist \(\"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/the index '\w+' does not exist \"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+/);
 
     // class instances do not support the new slot operator ("/Core.nut" at line: 16)
-    expect(commandOut).toMatch(/class instances do not support the new slot operator \(\"[_\-.\/\w+]+\/Core.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/class instances do not support the new slot operator \"[_\-.\/\w+]+\/Core.nut\" at line: \d+/);
 
     // AGENT TEST CHECKING
     // the index 'fieldDoesNotExists' does not exist ("/*/myAgent.class.nut" at line: 15)
-    expect(commandOut).toMatch(/the index '\w+' does not exist \(\"[_\-.\/\w+]+\/myAgent.class.nut\" at line: \d+\)/);
+    expect(commandOut).toMatch(/the index '\w+' does not exist \"[_\-.\/\w+]+\/myAgent.class.nut\" at line: \d+/);
 
     // Build time errors checking
     expect(commandOut).toMatch(/Build API error \"CompileFailed\"/);
@@ -84,7 +84,7 @@ describe('TestCommand test server error scenario', () => {
     //       and it has correct indentation which allow us to do not
     //       map the error line number for this use-case
     // in unknown agent_code:36
-    expect(commandOut).toMatch(/in unknown agent_code:\d+/);
+    expect(commandOut).toMatch(/unknown \"[_\-.\/\w+]+\/myAgent.class.nut\" at line: \d+/);
 
     done();
   });

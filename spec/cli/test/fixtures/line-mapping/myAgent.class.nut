@@ -22,6 +22,19 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+
+function f(x) {
+    f();
+}
+
+function f1(y) {
+    f(y);
+}
+
+function f2(z) {
+    f1(z);
+}
+
 class AgentCodeError {
   // NOTE: imptest should fail on
   //       this function call
@@ -33,4 +46,9 @@ class AgentCodeError {
 // Test remote agent code failure
 device.on("makefailure", function(payload) {
     unknownField = "this line should throw exception" ;
+});
+
+// Test remote agent code failure
+device.on("makefailurestack", function(payload) {
+    f2(1); // should get stack at this place
 });
