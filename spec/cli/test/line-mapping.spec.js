@@ -50,16 +50,34 @@ describe('TestCommand test server error scenario', () => {
   it('should verify that all test are failed with correct filename', (done) => {
     expect(commandSuccess).toBe(false);
     expect(commandOut).not.toBeEmptyString();
+
     // All tests are failed aas expected
     expect(commandOut).toMatch(/Testing failed\n/);
+
     // Promise.all failure - should contain wrong filename
     expect(commandOut).toMatch(/the index 'then' does not exist/);
+
     // division by zero ("*/myDevice.class.nut" at line: 7)
-    expect(commandOut).toMatch(/division by zero/);
-    // the index 'unknownField' does not exist ("*/code-error.device.nut" at line: \d+)
-    // float expected for the specified format ("*/code-error.device.nut" at line: 33)
+    expect(commandOut).toMatch(/division by zero \(\"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+\)/);
+
     // wrong number of parameters ("*/myDevice.class.nut" at line: 11)
+    expect(commandOut).toMatch(/wrong number of parameters \(\"[_\-.\/\w+]+\/myDevice.class.nut\" at line: \d+\)/);
+
+    // float expected for the specified format ("*/code-error.device.nut" at line: 33)
+    expect(commandOut).toMatch(/float expected for the specified format \(\"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+\)/);
+
+    // the index 'unknownField' does not exist ("*/code-error.device.nut" at line: \d+)
+    expect(commandOut).toMatch(/the index '\w+' does not exist \(\"[_\-.\/\w+]+\/code-error.device.nut\" at line: \d+\)/);
+
     // class instances do not support the new slot operator ("/Core.nut" at line: 16)
+    expect(commandOut).toMatch(/class instances do not support the new slot operator \(\"[_\-.\/\w+]+\/Core.nut\" at line: \d+\)/);
+
+    // AGENT TEST CHECKING
+    // the index 'fieldDoesNotExists' does not exist ("/*/myAgent.class.nut" at line: 15)
+    expect(commandOut).toMatch(/the index '\w+' does not exist \(\"[_\-.\/\w+]+\/myAgent.class.nut\" at line: \d+\)/);
+
+    // Build time errors checking
+    expect(commandOut).toMatch(/Build API error \"CompileFailed\"/);
 
     done();
   });

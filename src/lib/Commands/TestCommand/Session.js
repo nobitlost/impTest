@@ -72,10 +72,11 @@ class Session extends EventEmitter {
     // According to the ElectricImp docs there are a lot of error messages
     // https://electricimp.com/docs/troubleshooting/errors/
     // There is no reason to check all of them
-    // therefore the following code is looging for substring like (line 123)
-    // in the error message
-    function getLineError(isAgent, errorMsg) {
-      var codeBase = isAgent ? dCode : dCode; // TODO: add the correct check
+    // therefore the following code is looking for substring like (line 123)
+    // in the error message and replace them on the correct one
+    function getErrorDetails(errorMsg) {
+      var isAgent = testType == "agent";
+      var codeBase = isAgent ? aCode : dCode;
 
       var lineMentioning = errorMsg.match(/\(line \d+\)/g);
       if (lineMentioning == null || lineMentioning.length == 0)
@@ -87,16 +88,12 @@ class Session extends EventEmitter {
         var resultFile = null,
           resultPos = 0;
 
-        console.log("LINES: " + line);
-        console.log("ERROR: " + errorMsg);
-
-        var agentCode2 = codeBase.split("\n");
-        for (var i = 0; i < line && i < agentCode2.length; ++i) {
-          if (agentCode2[i].indexOf("//#line ") == 0) {
-            console.log("LOOKING AT: [ " + i + " ] " + agentCode2[i]);
-            var lNums = agentCode2[i].match(/\d+/g);
+        var codeLines = codeBase.split("\n");
+        for (var i = 0; i < line && i < codeLines.length; ++i) {
+          if (codeLines[i].indexOf("//#line ") == 0) {
+            var lNums = codeLines[i].match(/\d+/g);
             resultPos = line - i - 1; // + lNums[0]; // indentation could be > 1
-            resultFile = agentCode2[i].split(" ")[2]; // filename is a second parameter
+            resultFile = codeLines[i].split(" ")[2]; // filename is a second parameter
           }
         }
 
@@ -114,7 +111,7 @@ class Session extends EventEmitter {
       })
 
       .on('log', (log) => {
-        this._handleLog(log, getLineError);
+        this._handleLog(log, getErrorDetails);
       })
 
       .on('error', (event) => {
@@ -183,7 +180,7 @@ class Session extends EventEmitter {
    * @param {{type, value}} log
    * @private
    */
-  _handleLog(log, getInFilePosition) {
+  _handleLog(log, getErrorDetails) {
 
     switch (log.type) {
 
@@ -332,7 +329,7 @@ class Session extends EventEmitter {
             if (this.state !== 'started') {
               throw new Errors.TestStateError();
             }
-            var errorMessage = getInFilePosition ? getInFilePosition(true, log.value.message) : log.value.message;
+            var errorMessage = getErrorDetails ? getErrorDetails(log.value.message) : log.value.message;
             this.emit('error', new Errors.TestMethodError(errorMessage));
             break;
 
