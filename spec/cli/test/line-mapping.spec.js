@@ -79,6 +79,13 @@ describe('TestCommand test server error scenario', () => {
     // Build time errors checking
     expect(commandOut).toMatch(/Build API error \"CompileFailed\"/);
 
+    // Remote failure of the agent's code
+    // NOTE: the remote failures has a different signature of the log
+    //       and it has correct indentation which allow us to do not
+    //       map the error line number for this use-case
+    // in unknown agent_code:36
+    expect(commandOut).toMatch(/in unknown agent_code:\d+/);
+
     done();
   });
 

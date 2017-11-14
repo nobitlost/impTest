@@ -92,8 +92,10 @@ class Session extends EventEmitter {
         for (var i = 0; i < line && i < codeLines.length; ++i) {
           if (codeLines[i].indexOf("//#line ") == 0) {
             var lNums = codeLines[i].match(/\d+/g);
-            resultPos = line - i - 1; // + lNums[0]; // indentation could be > 1
-            resultFile = codeLines[i].split(" ")[2]; // filename is a second parameter
+            lNums = parseInt(lNums[0]);
+            resultPos = line - i + lNums; // builder could skip first copyright lines
+            resultFile = codeLines[i].split(" ")[2]; // filename is a third parameter
+            console.log("LOOK: " + i + "   " + line + "  " + lNums + resultFile);
           }
         }
 
