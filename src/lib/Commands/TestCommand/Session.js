@@ -66,14 +66,55 @@ class Session extends EventEmitter {
    */
   run(testType, deviceId, modelId, deviceCode, agentCode) {
 
+    var dCode = deviceCode.split("#line").join("//#line"),
+      aCode = agentCode.split("#line").join("//#line");
+
+    // According to the ElectricImp docs there are a lot of error messages
+    // https://electricimp.com/docs/troubleshooting/errors/
+    // There is no reason to check all of them
+    // therefore the following code is looging for substring like (line 123)
+    // in the error message
+    function getLineError(isAgent, errorMsg) {
+      var codeBase = isAgent ? dCode : dCode; // TODO: add the correct check
+
+      var lineMentioning = errorMsg.match(/\(line \d+\)/g);
+      if (lineMentioning == null || lineMentioning.length == 0)
+        return errorMsg;
+
+      for (var t = 0; t < lineMentioning.length; ++t) {
+        var lineItem = lineMentioning[t];
+        var line = parseInt(lineItem.substr(6, lineItem.length - 7));
+        var resultFile = null,
+          resultPos = 0;
+
+        console.log("LINES: " + line);
+        console.log("ERROR: " + errorMsg);
+
+        var agentCode2 = codeBase.split("\n");
+        for (var i = 0; i < line && i < agentCode2.length; ++i) {
+          if (agentCode2[i].indexOf("//#line ") == 0) {
+            console.log("LOOKING AT: [ " + i + " ] " + agentCode2[i]);
+            var lNums = agentCode2[i].match(/\d+/g);
+            resultPos = line - i - 1; // + lNums[0]; // indentation could be > 1
+            resultFile = agentCode2[i].split(" ")[2]; // filename is a second parameter
+          }
+        }
+
+        if (resultFile != null)
+          errorMsg = errorMsg.split("line " + line).join(resultFile + " at line: " + (resultPos));
+      } // checked all mentioning of line
+
+      return errorMsg;
+    };
+
     this.logParser.parse(testType, deviceId)
 
       .on('ready', () => {
-        this._start(deviceCode, agentCode, modelId, deviceId);
+        this._start(dCode, aCode, modelId, deviceId);
       })
 
       .on('log', (log) => {
-        this._handleLog(log);
+        this._handleLog(log, getLineError);
       })
 
       .on('error', (event) => {
@@ -106,7 +147,7 @@ class Session extends EventEmitter {
 
         return this._buildAPIClient
           .restartDevice(deviceId)
-          .then(/* device restarted */ () => {
+          .then( /* device restarted */ () => {
             this._debug(c.blue('Device restarted'));
           });
       })
@@ -142,7 +183,7 @@ class Session extends EventEmitter {
    * @param {{type, value}} log
    * @private
    */
-  _handleLog(log) {
+  _handleLog(log, getInFilePosition) {
 
     switch (log.type) {
 
@@ -217,7 +258,7 @@ class Session extends EventEmitter {
           this.emit('message', {
             type: 'info',
             message: c.blue('Disconnected. Allowed by config.')
-        });
+          });
 
           break;
         }
@@ -291,8 +332,8 @@ class Session extends EventEmitter {
             if (this.state !== 'started') {
               throw new Errors.TestStateError();
             }
-
-            this.emit('error', new Errors.TestMethodError(log.value.message));
+            var errorMessage = getInFilePosition ? getInFilePosition(true, log.value.message) : log.value.message;
+            this.emit('error', new Errors.TestMethodError(errorMessage));
             break;
 
           case 'SESSION_RESULT':
@@ -345,9 +386,8 @@ class Session extends EventEmitter {
 
             this.emit('message', {
               type: 'test',
-              message: null !== log.value.message
-                ? (c.green('Success: ') + message)
-                : c.green('Success')
+              message: null !== log.value.message ?
+                (c.green('Success: ') + message) : c.green('Success')
             });
 
             break;
@@ -410,7 +450,7 @@ class Session extends EventEmitter {
 
             break;
 
-          // this.info() from test case
+            // this.info() from test case
           case 'INFO':
 
             this.emit('message', {
