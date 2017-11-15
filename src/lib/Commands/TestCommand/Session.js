@@ -69,52 +69,6 @@ class Session extends EventEmitter {
     var dCode = deviceCode.split("#line").join("//#line"),
       aCode = agentCode.split("#line").join("//#line");
 
-    // According to the ElectricImp docs there are a lot of error messages
-    // https://electricimp.com/docs/troubleshooting/errors/
-    // There is no reason to check all of them
-    // therefore the following code is looking for substring like (line 123)
-    // in the error message and replace them on the correct one
-    function getErrorDetails(errorMsg) {
-      if (!errorMsg)
-        return errorMsg;
-      var isAgent = testType == "agent";
-      var lineMentioning = errorMsg.match(/\(line \d+\)/g);
-
-      if (lineMentioning == null || lineMentioning.length == 0) {
-        lineMentioning = errorMsg.match(/agent_code:\d+/g);
-        if (lineMentioning == null || lineMentioning.length == 0) {
-          lineMentioning = errorMsg.match(/device_code:\d+/g);
-          if (lineMentioning == null || lineMentioning.length == 0)
-            return errorMsg;
-          isAgent = false;
-        } else isAgent = true;
-      }
-      var codeBase = isAgent ? aCode : dCode;
-
-      var lineItem = lineMentioning[0];
-      if (!lineItem)
-        return errorMsg;
-      var line = parseInt(lineItem.match(/\d+/)[0]);
-      var resultFile = null,
-        resultPos = 0;
-
-      var codeLines = codeBase.split("\n");
-      for (var i = 0; i < line && i < codeLines.length; ++i) {
-        if (codeLines[i].indexOf("//#line ") == 0) {
-          var lNums = codeLines[i].match(/\d+/g);
-          lNums = parseInt(lNums[0]);
-          lNums = lNums > 1 ? lNums - 1 : 1;
-          resultPos = line - i + lNums - 2; // builder could skip first copyright lines
-          resultFile = codeLines[i].split(" ")[2]; // filename is a third parameter
-        }
-      }
-
-      if (resultFile != null)
-        errorMsg = errorMsg.split(lineItem).join(resultFile + " at line: " + (resultPos));
-
-      return errorMsg;
-    };
-
     this.logParser.parse(testType, deviceId)
 
       .on('ready', () => {
@@ -122,7 +76,8 @@ class Session extends EventEmitter {
       })
 
       .on('log', (log) => {
-        this._handleLog(log, getErrorDetails);
+        this._handleLog(log,
+          (errorLine => this._getErrorDetails(testType, dCode, aCode, errorLine)));
       })
 
       .on('error', (event) => {
@@ -132,6 +87,79 @@ class Session extends EventEmitter {
       .on('done', () => {
         this.stop = true;
       });
+  }
+
+  /**
+   * According to the ElectricImp docs there are a lot of error messages
+   * https://electricimp.com/docs/troubleshooting/errors/
+   * There is no reason to check all of them
+   * therefore the following code is looking for substring like
+   * (line 123) | agent_code: 123 | devic_code: 123
+   * in the error message and replace them on the correct one
+   *
+   * This is helper method to get the correct line number
+   * and filename for error messages
+   *
+   * @param {string} testType
+   * @param {string} deviceCode
+   * @param {string} agentCode
+   * @param {string} errorMsg
+   *
+   * @return {string} - an updated error message
+   */
+  _getErrorDetails(testType, dCode, aCode, errorMsg) {
+    // Check that error message not empty
+    if (!errorMsg)
+      return errorMsg;
+    // All logs without prefix will be interpreted as
+    // agent or device log depend on the next variable:
+    var isAgent = testType == "agent";
+    // looking for the "(line 123)" like matches
+    var lineMatches = errorMsg.match(/\(line \d+\)/g);
+    // try device_code:123 and agent_code:123 matches
+    if (lineMatches == null || lineMatches.length == 0) {
+      lineMatches = errorMsg.match(/agent_code:\d+/g);
+      if (lineMatches == null || lineMatches.length == 0) {
+        lineMatches = errorMsg.match(/device_code:\d+/g);
+        if (lineMatches == null || lineMatches.length == 0)
+          return errorMsg;
+        isAgent = false; // device_code:123
+      } else
+        isAgent = true; // agent_code:123
+    }
+    var codeBase = isAgent ? aCode : dCode;
+
+    var lineItem = lineMatches[0];
+    // this statement should never happen
+    if (!lineItem)
+      return errorMsg;
+
+    // extract line number:
+    var line = parseInt(lineItem.match(/\d+/)[0]);
+    var resultFile = null, resultPos = 0;
+
+    // Split code by lines and get the error code
+    // real position and filename
+    var codeLines = codeBase.split("\n");
+    for (var i = 0; i < line && i < codeLines.length; ++i) {
+      if (codeLines[i].indexOf("//#line ") == 0) {
+        // parse line statement
+        // "//#line 58 '/path/to/file.nut'
+        var lNums = codeLines[i].match(/\d+/g);
+        lNums = parseInt(lNums[0]); // line number shift is a first number in match
+        lNums = lNums > 1 ? lNums - 1 : 1;// descrese on 1 line number
+        resultPos = line - i + lNums - 2; // builder could skip first copyright lines
+        resultFile = codeLines[i].split(" ")[2]; // filename is a third parameter
+      }
+    }
+
+    // if filename was identified the return the correct error message
+    if (resultFile != null)
+      errorMsg = errorMsg.split(lineItem).join(resultFile + " at line: " + (resultPos));
+
+    // failed to identify the position in code, return message as is
+    // without changes
+    return errorMsg;
   }
 
   /**
