@@ -51,4 +51,4 @@ device.on("makefailure", function(payload) {
 // Test remote agent code failure
 device.on("makefailurestack", function(payload) {
     f2(1); // should get stack at this place
-});
+}.bindenv(this));

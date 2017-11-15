@@ -23,8 +23,17 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 class AgentTestCase extends ImpTestCase {
-  function testAgentServerError() {
-      AgentCodeError().checkFieldDoesNotExist();
-      assertTrue(true, "if you see this line then something goes wrong");
+  // this test should fail by timeout
+  // because imp.wakeup should throw an exception
+  function testStack() {
+      return Promise(function(resolve, reject) {
+          imp.wakeup(0, function() {
+              f2(1); // this method should throw an exception with stack
+          }.bindenv(this));
+
+          imp.wakeup(1, function() {
+              reject();
+          }.bindenv(this));
+      });
   }
 }

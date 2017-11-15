@@ -6,8 +6,7 @@
     "stopOnFailure": false,
     "timeout": 40,
     "tests": [
-        "tests/code-error.agent.nut",
-        "tests/code-error.device.nut",
-        "tests/buildtime-error.agent.nut"
+        "tests/remote-error.device.nut",
+        "tests/remote-error.agent.nut"
     ]
 }
